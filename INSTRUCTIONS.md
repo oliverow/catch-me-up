@@ -1,8 +1,8 @@
 # Session catch-up — instructions
 
-What to write in a catch-up summary of a Claude Code session, and how. These
-are the instructions of the `/what` skill, which writes a one-off summary in the
-chat; catch-me-up sends them to the model that keeps its pane up to date.
+What to write in a catch-up summary of a Claude Code session, and how.
+catch-me-up sends these instructions to the model that keeps its pane up to
+date.
 
 ## Who you are writing for
 

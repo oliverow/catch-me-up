@@ -1,4 +1,4 @@
-// catch-me-up: a pane that keeps a live /what-style summary of the session.
+// catch-me-up: a pane that keeps a live catch-up summary of the session.
 // After each turn that used a tool, Haiku folds the messages added since the
 // last update into the previous summary (a rolling update).
 

@@ -1,6 +1,6 @@
 {
   "name": "catch-me-up",
-  "description": "The catch-me-up mod: a live /what-style session summary in a side pane",
+  "description": "The catch-me-up mod: a side pane with a live catch-up summary of your Claude Code session",
   "owner": { "name": "Oliver Wang" },
   "plugins": [
     { "name": "catch-me-up", "source": "./" }
