@@ -18,7 +18,6 @@ let covered = 0
 let marker = ''
 let updatedAt = 0
 let status = ''
-let interactive = false
 let running = false
 // The update asked for while one was running: null, or its onlyIfWork
 let queued = null
@@ -145,7 +144,6 @@ async function update($, onlyIfWork) {
 
 export function register(on) {
   on('session.start', async ($, e, next) => {
-    interactive = e.isInteractive
     await load($)
     await $.command.register({ name: 'catch-me-up', description: 'Open the catch-me-up summary pane', immediate: true })
     // Opened without being asked: the terminal places it only when wide enough
@@ -165,9 +163,9 @@ export function register(on) {
   })
 
   on('turn.complete', async ($, e, next) => {
-    // Nobody sees the pane in a claude -p run. Not awaited, so the turn ends
+    // No app shows the pane in a claude -p run. Not awaited, so the turn ends
     // without waiting for the summary.
-    if (interactive && !e.agentId) update($, true)
+    if (!e.agentId && (await $.session.surfaces()).length) update($, true)
     return next(e)
   })
 
