@@ -6,7 +6,7 @@ Requires Claude Code 2.1.287 or later. Tested with 2.1.287 and 2.1.288.
 
 ## How it works
 
-- **When it updates.** After each turn of the main conversation that ran a command or edited a file (Bash, Edit, Write or NotebookEdit). Other turns, such as chat or only reading and searching, are not summarized on their own; their messages are folded in at the next update. Subagent turns are skipped, and nothing runs in `claude -p`, where no app shows the pane.
+- **When it updates.** After each turn of the main conversation that used at least one tool, such as a command, an edit, a file read, a search or an MCP call. Turns that are only chat are not summarized on their own; their messages are folded in at the next update. Subagent turns are skipped, and nothing runs in `claude -p`, where no app shows the pane.
 - **How it updates.** A rolling update with Haiku. Each call gets the previous summary, the messages added since then (long texts and tool results are clipped), and the output of `git status --short`, `git diff --stat`, and `git log --oneline -n 5`. Haiku writes the full new summary. A long backlog, such as after Rebuild, is folded in over several calls of about 100,000 characters each.
 - **What it writes.** It follows [INSTRUCTIONS.md](INSTRUCTIONS.md), the instructions of the `/what` skill, plus a few rules for the narrow pane: at most 4 short bullets per section.
 - **Cost.** One Haiku call per update, on your plan or API key.
@@ -21,7 +21,7 @@ Requires Claude Code 2.1.287 or later. Tested with 2.1.287 and 2.1.288.
 ## The pane
 
 - Opens by itself when a session starts. In the terminal it only appears when the window is at least 144 columns wide (110 once you have opened it yourself); run `/catch-me-up` to open it at any width.
-- **Refresh** (`r`): fold in what is new now, even if no command ran.
+- **Refresh** (`r`): fold in what is new now, even if no tool was used.
 - **Rebuild** (`b`): throw the summary away and summarize the session again from the start. Claude Code shows a mod at most the newest 4,096 messages. Does nothing while an update is running.
 - A failed update shows its reason in place of the time of the last update.
 

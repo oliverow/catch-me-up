@@ -1,6 +1,6 @@
 {
   "name": "catch-me-up",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "A side pane that keeps a live /what-style catch-up summary of the current session",
   "author": {
     "name": "Oliver Wang"
