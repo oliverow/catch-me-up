@@ -12,6 +12,12 @@ Requires Claude Code 2.1.287 or later. Tested with 2.1.287 and 2.1.288.
 - **Cost.** One Haiku call per update, on your plan or API key.
 - **Storage.** Each session's summary is kept in the mod's store, so it is still there after a restart or `/resume`. The store keeps the 100 most recent sessions.
 
+## What it runs and sends
+
+- **Runs** `git status --short`, `git diff --stat` and `git log --oneline -n 5` in the session's working directory before each update.
+- **Sends** the previous summary, the new transcript messages (your prompts, Claude's replies, and tool calls with clipped results) and that git output to Claude Haiku, through Claude Code's own model API with your session's credentials. Nothing is sent anywhere else.
+- **Stores** each session's summary on your machine, in the mod's store under `~/.claude/plugins/store/`.
+
 ## The pane
 
 - Opens by itself when a session starts. In the terminal it only appears when the window is at least 144 columns wide (110 once you have opened it yourself); run `/catch-me-up` to open it at any width.
