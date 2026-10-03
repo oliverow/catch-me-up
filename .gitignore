@@ -1,0 +1,2 @@
+# Claude Code writes this when it loads the mod; it extends the generated types
+tsconfig.json
