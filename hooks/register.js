@@ -1,5 +1,5 @@
 // catch-me-up: a pane that keeps a live /what-style summary of the session.
-// After each turn that used tools, Haiku folds the messages added since the
+// After each turn that ran a command or edited a file, Haiku folds the messages added since the
 // last update into the previous summary (a rolling update).
 
 const PANE = 'catch-me-up'
@@ -9,6 +9,8 @@ const MODEL = 'haiku'
 const CHUNK_CHARS = 100_000
 // How many sessions' summaries the store keeps
 const KEEP_SESSIONS = 100
+// Tools whose use makes a turn worth an update: commands and edits
+const WORK_TOOLS = new Set(['Bash', 'Edit', 'Write', 'NotebookEdit'])
 
 // The current session's summary, how many transcript messages it covers, and
 // a fingerprint of the last of them
@@ -79,7 +81,7 @@ async function systemPrompt($) {
 }
 
 // Fold the messages added since the last update into the summary.
-// With onlyIfWork, skip when none of them used a tool.
+// With onlyIfWork, skip when none of them ran a command or edited a file.
 async function update($, onlyIfWork) {
   if (running) {
     queued = (queued ?? true) && onlyIfWork
@@ -98,7 +100,7 @@ async function update($, onlyIfWork) {
         : messages.findLastIndex((m) => fingerprint(m) === marker) + 1
     const fresh = messages.slice(i)
     if (!fresh.length) return
-    if (onlyIfWork && !fresh.some((m) => m.toolUses.length)) return
+    if (onlyIfWork && !fresh.some((m) => m.toolUses.some((t) => WORK_TOOLS.has(t.tool)))) return
 
     status = 'Updating…'
     $.ui.invalidate('ui.render')
@@ -201,7 +203,7 @@ export function register(on) {
         Text({ children: [' '] }),
         summary
           ? Markdown({ key: 'summary', text: summary })
-          : Text({ dimColor: true, children: ['The summary appears after the first turn that uses a tool, or press Refresh.'] }),
+          : Text({ dimColor: true, children: ['The summary appears after the first turn that runs a command or edits a file, or press Refresh.'] }),
       ],
     })
   })
