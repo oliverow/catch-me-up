@@ -195,6 +195,17 @@ export function register(on) {
                 update($, false)
               },
             }),
+            Button({
+              key: 'copy',
+              label: 'Copy',
+              hotkey: 'c',
+              plain: true,
+              onPress: async (press) => {
+                if (!summary) return
+                const r = await $.ui.copy({ text: summary, surface: press.surface })
+                $.ui.toast(r.isCopied ? 'Summary copied' : 'Copy failed: ' + r.reason)
+              },
+            }),
             Text({ dimColor: true, children: [status || when] }),
           ],
         }),

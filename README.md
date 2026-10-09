@@ -23,6 +23,7 @@ Requires Claude Code 2.1.287 or later. Tested with 2.1.287 and 2.1.288.
 - Opens by itself when a session starts. In the terminal it only appears when the window is at least 144 columns wide (110 once you have opened it yourself); run `/catch-me-up` to open it at any width.
 - **Refresh** (`r`): fold in what is new now, even if no tool was used.
 - **Rebuild** (`b`): throw the summary away and summarize the session again from the start. Claude Code shows a mod at most the newest 4,096 messages. Does nothing while an update is running.
+- **Copy** (`c`): put the summary's Markdown on the clipboard. The pane's text can't be selected with the mouse, so this is how to paste it elsewhere.
 - A failed update shows its reason in place of the time of the last update.
 
 ## Install
