@@ -10,6 +10,41 @@ const CHUNK_CHARS = 100_000
 // How many sessions' summaries the store keeps
 const KEEP_SESSIONS = 100
 
+// The languages the `language` setting offers: the pane's labels in each.
+// The key is also the language's name in the model's instructions.
+const LANGUAGES = {
+  English: {
+    refresh: 'Refresh',
+    rebuild: 'Rebuild',
+    updated: 'Updated',
+    noSummaryYet: 'No summary yet',
+    updating: 'Updating…',
+    updateFailed: 'Update failed: ',
+    emptyPane: 'The summary appears after the first turn that uses a tool, or press Refresh.',
+  },
+  German: {
+    refresh: 'Aktualisieren',
+    rebuild: 'Neu aufbauen',
+    updated: 'Aktualisiert',
+    noSummaryYet: 'Noch keine Zusammenfassung',
+    updating: 'Wird aktualisiert…',
+    updateFailed: 'Aktualisierung fehlgeschlagen: ',
+    emptyPane: 'Die Zusammenfassung erscheint nach der ersten Runde mit einem Werkzeugaufruf, oder drücke Aktualisieren.',
+  },
+  Russian: {
+    refresh: 'Обновить',
+    rebuild: 'Пересобрать',
+    updated: 'Обновлено',
+    noSummaryYet: 'Резюме пока нет',
+    updating: 'Обновляется…',
+    updateFailed: 'Не удалось обновить: ',
+    emptyPane: 'Резюме появится после первого хода с вызовом инструмента, или нажмите «Обновить».',
+  },
+}
+// Set from the mod's options each time the module loads
+let summaryLanguage = 'English'
+let paneLabels = LANGUAGES.English
+
 // The current session's summary, how many transcript messages it covers, and
 // a fingerprint of the last of them
 let sessionId = ''
@@ -74,6 +109,7 @@ async function systemPrompt($) {
     'Follow the instructions below for what to write and how. They were written for a one-off summary by an agent that reads the whole conversation and runs commands. You cannot. You get your previous summary, the messages added since it was written, and the current git state. Write the full updated summary: keep what is still true, rewrite what changed, drop what no longer matters. The previous summary is your only memory of earlier messages, so keep its facts unless the new messages change them.',
     'Put the weight on the high-level context, the motivation, a summary of the method, and the current progress.',
     'Format, overriding the instructions below: the pane is narrow, so every section is a list of "- " bullets, never a paragraph. At most 4 bullets per section, each one or two short lines. Output only the summary Markdown, starting with the first heading.',
+    `Language, overriding the instructions below: write the whole summary in ${summaryLanguage}, the section headings included. Keep code, file paths, commands and identifiers exactly as they are.`,
     '<instructions>\n' + instructions + '\n</instructions>',
   ].join('\n\n')
 }
@@ -100,7 +136,7 @@ async function update($, onlyIfWork) {
     if (!fresh.length) return
     if (onlyIfWork && !fresh.some((m) => m.toolUses.length)) return
 
-    status = 'Updating…'
+    status = paneLabels.updating
     $.ui.invalidate('ui.render')
     const system = await systemPrompt($)
     const git = await gitState($)
@@ -130,7 +166,7 @@ async function update($, onlyIfWork) {
     }
     status = ''
   } catch (err) {
-    status = 'Update failed: ' + err.message
+    status = paneLabels.updateFailed + err.message
   } finally {
     running = false
     $.ui.invalidate('ui.render')
@@ -142,7 +178,10 @@ async function update($, onlyIfWork) {
   }
 }
 
-export function register(on) {
+export function register(on, options) {
+  summaryLanguage = Object.hasOwn(LANGUAGES, options?.language) ? options.language : 'English'
+  paneLabels = LANGUAGES[summaryLanguage]
+
   on('session.start', async ($, e, next) => {
     await load($)
     await $.command.register({ name: 'catch-me-up', description: 'Open the catch-me-up summary pane', immediate: true })
@@ -173,7 +212,7 @@ export function register(on) {
     if (e.requestId !== PANE) return next(e)
     const { Box, Text, Button, Markdown } = $.ui.resolve(e)
     const d = new Date(updatedAt)
-    const when = updatedAt ? `Updated ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` : 'No summary yet'
+    const when = updatedAt ? `${paneLabels.updated} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` : paneLabels.noSummaryYet
     return Box({
       flexDirection: 'column',
       children: [
@@ -181,10 +220,10 @@ export function register(on) {
           flexDirection: 'row',
           columnGap: 2,
           children: [
-            Button({ key: 'refresh', label: 'Refresh', hotkey: 'r', plain: true, onPress: () => update($, false) }),
+            Button({ key: 'refresh', label: paneLabels.refresh, hotkey: 'r', plain: true, onPress: () => update($, false) }),
             Button({
               key: 'rebuild',
-              label: 'Rebuild',
+              label: paneLabels.rebuild,
               hotkey: 'b',
               plain: true,
               onPress: () => {
@@ -201,7 +240,7 @@ export function register(on) {
         Text({ children: [' '] }),
         summary
           ? Markdown({ key: 'summary', text: summary })
-          : Text({ dimColor: true, children: ['The summary appears after the first turn that uses a tool, or press Refresh.'] }),
+          : Text({ dimColor: true, children: [paneLabels.emptyPane] }),
       ],
     })
   })
