@@ -22,6 +22,76 @@ let running = false
 // The update asked for while one was running: null, or its onlyIfWork
 let queued = null
 
+// The language of the summary and the pane: the `language` option, else Claude
+// Code's `language` setting, else English.
+let language = 'English'
+const isEnglish = (v) => /^(en([_-]|$)|english)/i.test(v.trim())
+const isGerman = (v) => /^(de([_-]|$)|german|deutsch)/i.test(v.trim())
+
+// The pane's own words. A language without a table here gets the English ones.
+const STRINGS = {
+  en: {
+    title: 'Catch me up',
+    command: 'Open the catch-me-up summary pane',
+    refresh: 'Refresh',
+    refreshKey: 'r',
+    rebuild: 'Rebuild',
+    rebuildKey: 'b',
+    updated: 'Updated',
+    none: 'No summary yet',
+    updating: 'Updating…',
+    failed: 'Update failed: ',
+    empty: 'The summary appears after the first turn that uses a tool, or press Refresh.',
+  },
+  de: {
+    title: 'Zusammenfassung',
+    command: 'Öffnet das Panel mit der laufenden Zusammenfassung',
+    refresh: 'Aktualisieren',
+    refreshKey: 'a',
+    rebuild: 'Neu aufbauen',
+    rebuildKey: 'n',
+    updated: 'Aktualisiert',
+    none: 'Noch keine Zusammenfassung',
+    updating: 'Wird aktualisiert …',
+    failed: 'Aktualisierung fehlgeschlagen: ',
+    empty: 'Die Zusammenfassung erscheint nach dem ersten Zug, der ein Werkzeug benutzt, oder mit Aktualisieren.',
+  },
+}
+const tr = () => (isGerman(language) ? STRINGS.de : STRINGS.en)
+
+// The five headings of INSTRUCTIONS.md, fixed per language so they read the same on every update
+const HEADINGS = {
+  de: ['Worum es geht', 'Was ich gemacht habe', 'Was dabei herauskam', 'Aktueller Stand', 'Als Nächstes / wartet auf dich'],
+}
+
+async function detectLanguage($, option) {
+  const chosen = String(option ?? '').trim()
+  if (chosen && chosen.toLowerCase() !== 'auto') return chosen
+  try {
+    const settings = await $.settings.read()
+    if (typeof settings.language === 'string' && settings.language.trim()) return settings.language.trim()
+  } catch {
+    // No settings: English
+  }
+  return 'English'
+}
+
+// What the system prompt adds for a summary in another language than English
+function languageRule() {
+  if (isEnglish(language)) return ''
+  if (isGerman(language)) {
+    return (
+      'Write the whole summary in German. Use these headings instead of the English ones in the instructions, in this order: ' +
+      HEADINGS.de.map((h) => '"## ' + h + '"').join(', ') +
+      '. Keep file names, paths, commands, code identifiers and proper names as they are.'
+    )
+  }
+  return (
+    'Write the whole summary in ' + language + ', the section headings translated too. ' +
+    'Keep file names, paths, commands, code identifiers and proper names as they are.'
+  )
+}
+
 async function load($) {
   sessionId = await $.session.id()
   const saved = await $.store.get('session:' + sessionId)
@@ -74,8 +144,11 @@ async function systemPrompt($) {
     'Follow the instructions below for what to write and how. They were written for a one-off summary by an agent that reads the whole conversation and runs commands. You cannot. You get your previous summary, the messages added since it was written, and the current git state. Write the full updated summary: keep what is still true, rewrite what changed, drop what no longer matters. The previous summary is your only memory of earlier messages, so keep its facts unless the new messages change them.',
     'Put the weight on the high-level context, the motivation, a summary of the method, and the current progress.',
     'Format, overriding the instructions below: the pane is narrow, so every section is a list of "- " bullets, never a paragraph. At most 4 bullets per section, each one or two short lines. Output only the summary Markdown, starting with the first heading.',
+    languageRule(),
     '<instructions>\n' + instructions + '\n</instructions>',
-  ].join('\n\n')
+  ]
+    .filter(Boolean)
+    .join('\n\n')
 }
 
 // Fold the messages added since the last update into the summary.
@@ -100,7 +173,7 @@ async function update($, onlyIfWork) {
     if (!fresh.length) return
     if (onlyIfWork && !fresh.some((m) => m.toolUses.length)) return
 
-    status = 'Updating…'
+    status = tr().updating
     $.ui.invalidate('ui.render')
     const system = await systemPrompt($)
     const git = await gitState($)
@@ -130,7 +203,7 @@ async function update($, onlyIfWork) {
     }
     status = ''
   } catch (err) {
-    status = 'Update failed: ' + err.message
+    status = tr().failed + err.message
   } finally {
     running = false
     $.ui.invalidate('ui.render')
@@ -142,12 +215,13 @@ async function update($, onlyIfWork) {
   }
 }
 
-export function register(on) {
+export function register(on, options) {
   on('session.start', async ($, e, next) => {
+    language = await detectLanguage($, options?.language)
     await load($)
-    await $.command.register({ name: 'catch-me-up', description: 'Open the catch-me-up summary pane', immediate: true })
+    await $.command.register({ name: 'catch-me-up', description: tr().command, immediate: true })
     // Opened without being asked: the terminal places it only when wide enough
-    await $.ui.open({ id: PANE, title: 'Catch me up' })
+    await $.ui.open({ id: PANE, title: tr().title })
     return next(e)
   })
 
@@ -158,7 +232,7 @@ export function register(on) {
   })
 
   on('command.run', { command: 'catch-me-up' }, async ($) => {
-    await $.ui.open({ id: PANE, title: 'Catch me up' })
+    await $.ui.open({ id: PANE, title: tr().title })
     return {}
   })
 
@@ -172,8 +246,9 @@ export function register(on) {
   on('ui.render', { component: 'Pane' }, async ($, e, next) => {
     if (e.requestId !== PANE) return next(e)
     const { Box, Text, Button, Markdown } = $.ui.resolve(e)
+    const s = tr()
     const d = new Date(updatedAt)
-    const when = updatedAt ? `Updated ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` : 'No summary yet'
+    const when = updatedAt ? `${s.updated} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` : s.none
     return Box({
       flexDirection: 'column',
       children: [
@@ -181,11 +256,11 @@ export function register(on) {
           flexDirection: 'row',
           columnGap: 2,
           children: [
-            Button({ key: 'refresh', label: 'Refresh', hotkey: 'r', plain: true, onPress: () => update($, false) }),
+            Button({ key: 'refresh', label: s.refresh, hotkey: s.refreshKey, plain: true, onPress: () => update($, false) }),
             Button({
               key: 'rebuild',
-              label: 'Rebuild',
-              hotkey: 'b',
+              label: s.rebuild,
+              hotkey: s.rebuildKey,
               plain: true,
               onPress: () => {
                 if (running) return
@@ -201,7 +276,7 @@ export function register(on) {
         Text({ children: [' '] }),
         summary
           ? Markdown({ key: 'summary', text: summary })
-          : Text({ dimColor: true, children: ['The summary appears after the first turn that uses a tool, or press Refresh.'] }),
+          : Text({ dimColor: true, children: [s.empty] }),
       ],
     })
   })

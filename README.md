@@ -25,6 +25,14 @@ Requires Claude Code 2.1.287 or later. Tested with 2.1.287 and 2.1.288.
 - **Rebuild** (`b`): throw the summary away and summarize the session again from the start. Claude Code shows a mod at most the newest 4,096 messages. Does nothing while an update is running.
 - A failed update shows its reason in place of the time of the last update.
 
+## Language
+
+`language`: `auto` (default) follows Claude Code's `language` setting and falls back to English. Or name a language, e.g. `German` or `Korean`. The summary is written in it, section headings included; file names, commands and code identifiers stay as they are. German gets fixed headings, so they read the same on every update, and German labels in the pane (**Aktualisieren** `a`, **Neu aufbauen** `n`); any other language keeps the English labels. Set it in `/config`, or in `~/.claude/settings.json`:
+
+```json
+{ "pluginConfigs": { "catch-me-up": { "options": { "language": "German" } } } }
+```
+
 ## Install
 
 ```bash

@@ -1,9 +1,17 @@
 {
   "name": "catch-me-up",
-  "version": "0.1.3",
+  "version": "0.2.0",
   "description": "A side pane with a live catch-up summary of your Claude Code session: why it started, what was done, where things stand, and what needs you",
   "author": {
     "name": "Oliver Wang"
   },
-  "license": "MIT"
+  "license": "MIT",
+  "userConfig": {
+    "language": {
+      "type": "string",
+      "title": "Language",
+      "default": "auto",
+      "description": "Language of the summary, headings included, and of the pane. auto follows Claude Code's language setting, else English. Or name one, e.g. German or Korean. The pane's own labels exist in English and German."
+    }
+  }
 }
